@@ -1,4 +1,4 @@
-// x402 Standard Types (Coinbase CDP準拠)
+// x402 Standard Types (v1/v2対応)
 
 export interface Authorization {
   from: string;
@@ -16,18 +16,25 @@ export interface ExactEvmPayload {
 
 export interface PaymentPayload {
   x402Version: number;
-  scheme: "exact";
-  network: "polygon" | "base" | "base-sepolia" | "polygon-amoy";
+  scheme?: "exact";
+  network?: string;
   payload: ExactEvmPayload;
+  resource?: {
+    url: string;
+    description: string;
+    mimeType: string;
+  };
+  accepted?: Record<string, any>;
 }
 
 export interface PaymentRequirements {
   scheme: "exact";
-  network: "polygon" | "base" | "base-sepolia" | "polygon-amoy";
-  maxAmountRequired: string;
-  resource: string;
-  description: string;
-  mimeType: string;
+  network: string;
+  maxAmountRequired?: string; // v1
+  amount?: string;            // v2
+  resource?: string;
+  description?: string;
+  mimeType?: string;
   payTo: string;
   maxTimeoutSeconds: number;
   asset: string;

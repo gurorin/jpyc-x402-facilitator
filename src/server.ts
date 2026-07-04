@@ -24,12 +24,29 @@ app.get("/health", (req, res) => {
   });
 });
 
+// x402 v1/v2 対応：サポートするネットワーク・スキームを返す
+app.get("/supported", (req, res) => {
+  res.json({
+    kinds: [
+      {
+        x402Version: 1,
+        scheme: "exact",
+        network: "polygon"
+      },
+      {
+        x402Version: 2,
+        scheme: "exact",
+        network: "eip155:137"
+      }
+    ]
+  });
+});
+
 app.post("/verify", async (req, res) => {
   try {
     const verifyReq = req.body as VerifyRequest;
     console.log(`[Verify] Request received:`, JSON.stringify(verifyReq, null, 2));
 
-    // 必須フィールドのチェック（リクエスト形式の検証）
     if (!verifyReq.x402Version || !verifyReq.paymentPayload || !verifyReq.paymentRequirements) {
       console.log(`[Verify] Invalid request format, returning 400`);
       return res.status(400).json({
@@ -53,12 +70,14 @@ app.post("/verify", async (req, res) => {
 
 app.post("/settle", async (req, res) => {
   try {
-    const settleReq = req.body as SettleRequest;
     console.log(`[Settle] Request received from:`, req.ip);
-    console.log(`[Settle] Request body:`, JSON.stringify(settleReq, null, 2));
+    console.log(`[Settle] Request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`[Settle] Request headers:`, JSON.stringify(req.headers, null, 2));
 
-    // 必須フィールドのチェック（リクエスト形式の検証）
-    if (!settleReq.x402Version || !settleReq.paymentPayload || !settleReq.paymentRequirements) {
+    // ボディから直接取得（Zodバリデーションをスキップ）
+    const settleReq = req.body as SettleRequest;
+
+    if (!settleReq || !settleReq.paymentPayload) {
       console.log(`[Settle] Invalid request format, returning 400`);
       return res.status(400).json({
         errorType: "invalid_request",
@@ -68,10 +87,10 @@ app.post("/settle", async (req, res) => {
 
     const result = await settleAuthorization(settleReq);
     console.log(`[Settle] Settlement result:`, result);
-    console.log(`[Settle] Sending 200 OK response to client...`);
 
     return res.status(200).json(result);
   } catch (err: any) {
+    console.error("[Settle] Unexpected error:", err);
     return res.status(500).json({
       errorType: "internal_server_error",
       errorMessage: "An internal server error occurred. Please try again later.",
@@ -81,10 +100,8 @@ app.post("/settle", async (req, res) => {
 
 // Vercelデプロイ時はappをエクスポート、ローカル開発時はサーバーを起動
 if (process.env.VERCEL || process.env.VERCEL_ENV) {
-  // Vercel環境ではappをエクスポート
   module.exports = app;
 } else {
-  // ローカル開発環境では環境変数をバリデーションしてサーバーを起動
   try {
     validateEnv();
   } catch (error: any) {

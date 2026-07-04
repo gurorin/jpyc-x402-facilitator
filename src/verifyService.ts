@@ -4,18 +4,24 @@ import { jpycContract } from "./common";
 
 // x402リクエストのバリデーション
 function validateX402Request(req: VerifyRequest): { valid: boolean; reason?: InvalidReason } {
-  // x402Versionチェック
-  if (req.x402Version !== 1 || req.paymentPayload.x402Version !== 1) {
+  // x402Versionチェック（v1・v2両方対応）
+  const version = req.x402Version;
+  if ((version !== 1 && version !== 2) || req.paymentPayload.x402Version !== version) {
     return { valid: false, reason: "invalid_x402_version" };
   }
 
   // schemeチェック
-  if (req.paymentPayload.scheme !== "exact" || req.paymentRequirements.scheme !== "exact") {
+  if (req.paymentRequirements.scheme !== "exact") {
+    return { valid: false, reason: "invalid_scheme" };
+  }
+
+  // v1のみschemeをpayloadからもチェック
+  if (version === 1 && req.paymentPayload.scheme !== "exact") {
     return { valid: false, reason: "invalid_scheme" };
   }
 
   // networkチェック
-  if (req.paymentPayload.network !== req.paymentRequirements.network) {
+  if (version === 1 && req.paymentPayload.network !== req.paymentRequirements.network) {
     return { valid: false, reason: "invalid_network" };
   }
 
@@ -45,8 +51,9 @@ function validateAuthorization(
     return { valid: false, reason: "invalid_exact_evm_payload_authorization_value" };
   }
 
-  // 金額が要求額と一致するかチェック
-  const maxAmount = BigInt(requirements.maxAmountRequired);
+  // 金額が要求額と一致するかチェック（v1: maxAmountRequired, v2: amount）
+  const requiredAmountStr = requirements.maxAmountRequired ?? requirements.amount ?? "0";
+  const maxAmount = BigInt(requiredAmountStr);
   if (value < maxAmount) {
     return { valid: false, reason: "invalid_exact_evm_payload_authorization_value_too_low" };
   }
@@ -72,7 +79,9 @@ function validateAuthorization(
 
 export async function verifyAuthorization(req: VerifyRequest): Promise<VerifyResponse> {
   const { paymentPayload, paymentRequirements } = req;
-  const { authorization } = paymentPayload.payload;
+
+  // v2ではauthorizationはpayload直下
+  const authorization = paymentPayload.payload?.authorization || paymentPayload.payload;
   const payer = authorization.from;
 
   const x402Validation = validateX402Request(req);

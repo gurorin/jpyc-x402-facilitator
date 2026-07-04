@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { createPublicClient, createWalletClient, http, getContract } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { polygon } from "viem/chains";

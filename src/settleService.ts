@@ -3,10 +3,12 @@ import { SettleRequest, SettleResponse } from "./types";
 import { jpycContract } from "./common";
 
 export async function settleAuthorization(req: SettleRequest): Promise<SettleResponse> {
-  const { paymentPayload } = req;
+  const { paymentPayload, paymentRequirements } = req;
   const { authorization } = paymentPayload.payload;
   const payer = authorization.from;
-  const network = paymentPayload.network;
+
+  // v1: paymentPayload.network, v2: paymentRequirements.network
+  const network = paymentPayload.network ?? paymentRequirements.network ?? "eip155:137";
 
   console.log(`[Settle] Processing authorization from ${authorization.from} to ${authorization.to}, value: ${authorization.value}`);
 
