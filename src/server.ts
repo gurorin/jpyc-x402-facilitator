@@ -15,6 +15,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// favicon・トップページの404を消す
+app.get("/", (req, res) => {
+  res.json({ service: "jpyc-x402-facilitator-polygon", status: "ok" });
+});
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.get("/favicon.png", (req, res) => res.status(204).end());
+
 // ヘルスチェック
 app.get("/health", (req, res) => {
   res.json({
@@ -74,7 +81,6 @@ app.post("/settle", async (req, res) => {
     console.log(`[Settle] Request body:`, JSON.stringify(req.body, null, 2));
     console.log(`[Settle] Request headers:`, JSON.stringify(req.headers, null, 2));
 
-    // ボディから直接取得（Zodバリデーションをスキップ）
     const settleReq = req.body as SettleRequest;
 
     if (!settleReq || !settleReq.paymentPayload) {
